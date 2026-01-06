@@ -1,2 +1,2 @@
 # lime
-reFX helper functions
+Generic helper functions
