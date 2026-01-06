@@ -1,2 +1,2 @@
 # lime
-Generic helper functions
+Some helper functions
