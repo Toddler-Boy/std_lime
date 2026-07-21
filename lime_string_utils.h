@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstring>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 //-----------------------------------------------------------------------------
@@ -28,6 +30,22 @@ namespace lime::str
 }
 //-----------------------------------------------------------------------------
 
+// Functors for case-insensitive unordered containers,
+// e.g. std::unordered_set<std::string, HashIgnoreCase, EqualIgnoreCase>
+struct HashIgnoreCase
+{
+	[[ nodiscard ]] std::size_t operator() ( std::string_view key ) const;
+};
+
+struct EqualIgnoreCase
+{
+	[[ nodiscard ]] bool operator() ( std::string_view lhs, std::string_view rhs ) const noexcept
+	{
+		return equalIgnoreCase ( lhs, rhs );
+	}
+};
+//-----------------------------------------------------------------------------
+
 [[nodiscard]] inline std::string toLower ( std::string input ) noexcept
 {
 	for ( char& c : input )
@@ -42,6 +60,24 @@ namespace lime::str
 		if ( c >= 'a' && c <= 'z' ) c -= ( 'a' - 'A' );
 
 	return input;
+}
+//-----------------------------------------------------------------------------
+
+inline std::size_t HashIgnoreCase::operator() ( std::string_view key ) const
+{
+	return std::hash<std::string> {} ( toLower ( std::string ( key ) ) );
+}
+//-----------------------------------------------------------------------------
+
+// Replaces the first occurrence of "from" in place; returns whether a replacement happened
+inline bool replaceFirst ( std::string& str, std::string_view from, std::string_view to )
+{
+	const auto	pos = str.find ( from );
+	if ( pos == std::string::npos )
+		return false;
+
+	str.replace ( pos, from.length (), to );
+	return true;
 }
 //-----------------------------------------------------------------------------
 
@@ -70,6 +106,98 @@ namespace lime::str
 
 	const auto end = input.find_last_not_of ( " \t\n\r\f\v" );
 	return input.substr ( start, end - start + 1 );
+}
+//-----------------------------------------------------------------------------
+
+// Natural sort order: runs of digits compare by numeric value ("track2" < "track10"),
+// leading zeros compare fractionally ("01" < "1"), ties fall back to strcmp
+[[ nodiscard ]] inline int naturalCompare ( const char* const a, const char* const b ) noexcept
+{
+	auto isspace = [] ( const unsigned char c ) { return c && c <= 32; };
+	auto isdigit = [] ( const unsigned char c ) { return c >= '0' && c <= '9'; };
+	auto compare_right = [ &isdigit ] ( const char* a, const char* b ) -> int
+	{
+		auto	bias = 0;
+
+		// The longest run of digits wins. That aside, the greatest
+		// value wins, but we can't know that it will until we've scanned
+		// both numbers to know that they have the same magnitude, so we
+		// remember it in BIAS.
+		for ( ;; a++, b++ )
+		{
+			if ( ! isdigit ( *a ) && ! isdigit ( *b ) )	return bias;
+			if ( ! isdigit ( *a ) )						return -1;
+			if ( ! isdigit ( *b ) )						return +1;
+
+			if ( *a < *b )
+			{
+				if ( ! bias )
+					bias = -1;
+			}
+			else if ( *a > *b )
+			{
+				if ( ! bias )
+					bias = +1;
+			}
+			else if ( ! *a && ! *b )
+				return bias;
+		}
+
+		std::unreachable ();
+	};
+	auto compare_left = [ &isdigit ] ( const char* a, const char* b ) -> int
+	{
+		// Compare two left-aligned numbers: the first to have a different value wins
+		for ( ;; a++, b++ )
+		{
+			if ( ! isdigit ( *a ) && ! isdigit ( *b ) )		return 0;
+			if ( ! isdigit ( *a ) )							return -1;
+			if ( ! isdigit ( *b ) )							return +1;
+			if ( *a < *b )									return -1;
+			if ( *a > *b )									return +1;
+		}
+
+		std::unreachable ();
+	};
+
+	auto	ai = 0;
+	auto	bi = 0;
+
+	while ( 1 )
+	{
+		auto	ca = a[ ai ];
+		auto	cb = b[ bi ];
+
+		// skip over leading spaces or zeros
+		while ( isspace ( ca ) )	ca = a[ ++ai ];
+		while ( isspace ( cb ) )	cb = b[ ++bi ];
+
+		// process run of digits
+		if ( isdigit ( ca ) && isdigit ( cb ) )
+		{
+			const auto	fractional = ( ca == '0' || cb == '0' );
+
+			if ( fractional )
+			{
+				if ( auto result = compare_left ( a + ai, b + bi ); result != 0 )
+					return result;
+			}
+			else
+			{
+				if ( auto result = compare_right ( a + ai, b + bi ); result != 0 )
+					return result;
+			}
+		}
+
+		if ( ! ca && ! cb )		return std::strcmp ( a, b );
+		if ( ca < cb )			return -1;
+		if ( ca > cb )			return +1;
+
+		++ai;
+		++bi;
+	}
+
+	std::unreachable ();
 }
 //-----------------------------------------------------------------------------
 
