@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+
 //-----------------------------------------------------------------------------
 
 namespace lime
@@ -10,6 +12,8 @@ namespace lime
 template<typename InX, typename InMin, typename InMax, typename OutMin = float, typename OutMax = float, typename Out = OutMin>
 Out remap ( const InX x, const InMin inMin, const InMax inMax, const OutMin outMin = 0.0f, const OutMax outMax = 1.0f )
 {
+	assert ( inMin != inMax );	// zero-width input range divides by zero
+
 	const auto	xf = static_cast<Out>( x - inMin );
 	const auto	maxF = static_cast<Out>( inMax - inMin );
 
@@ -20,6 +24,8 @@ Out remap ( const InX x, const InMin inMin, const InMax inMax, const OutMin outM
 template<typename InX, typename InMin, typename InMax, typename OutMin = float, typename OutMax = float, typename Out = OutMin>
 Out remapClamp ( const InX x, const InMin inMin, const InMax inMax, const OutMin outMin = 0.0f, const OutMax outMax = 1.0f )
 {
+	assert ( inMin != inMax );	// zero-width input range divides by zero
+
 	const auto	xf = static_cast<Out>( x - inMin );
 	const auto	maxF = static_cast<Out>( inMax - inMin );
 	const auto	result = static_cast<Out>( outMin ) + ( xf / maxF ) * ( static_cast<Out>( outMax ) - static_cast<Out>( outMin ) );

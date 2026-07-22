@@ -21,7 +21,7 @@ public:
 	}
 
 	[[ nodiscard ]] T& operator[] ( size_t index )				{	return arr[ index ];	}
-	[[ nodiscard ]] const T& operator[] ( size_t index ) const	{	arr[ index ];			}
+	[[ nodiscard ]] const T& operator[] ( size_t index ) const	{	return arr[ index ];	}
 
 	[[ nodiscard ]] typename std::array<T, N>::iterator begin ()				{	return arr.begin ();			}
 	[[ nodiscard ]] typename std::array<T, N>::iterator end ()					{	return arr.begin () + vec_size;	}
