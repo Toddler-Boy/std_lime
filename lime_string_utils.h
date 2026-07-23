@@ -81,6 +81,24 @@ inline bool replaceFirst ( std::string& str, std::string_view from, std::string_
 }
 //-----------------------------------------------------------------------------
 
+// Replaces every occurrence of "from" in place; returns the number of replacements
+inline std::size_t replaceAll ( std::string& str, std::string_view from, std::string_view to )
+{
+	if ( from.empty () )
+		return 0;
+
+	std::size_t	count = 0;
+
+	for ( auto pos = str.find ( from ); pos != std::string::npos; pos = str.find ( from, pos + to.length () ) )
+	{
+		str.replace ( pos, from.length (), to );
+		++count;
+	}
+
+	return count;
+}
+//-----------------------------------------------------------------------------
+
 [[nodiscard]] inline std::string_view ltrim ( std::string_view input ) noexcept
 {
 	const auto	pos = input.find_first_not_of ( " \t\n\r\f\v" );
